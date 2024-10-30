@@ -622,6 +622,9 @@ class TransformerDecoder(nn.Module):
         """
         # input tensor of shape [b, s]
         seq_len = tokens.shape[1]
+        # TODO: remove
+        b = tokens.shape[0]
+        user_idxs = torch.arange(start=0, end=b).view(10, 1)
 
         self._validate_inputs(
             seq_len,

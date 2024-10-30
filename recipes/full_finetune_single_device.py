@@ -378,7 +378,9 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 model, auto_wrap_policy={modules.TransformerSelfAttentionLayer}
             )
 
-        model.load_state_dict(model_state_dict)
+
+        miss_or_unexpected_keys = model.load_state_dict(model_state_dict, strict=False)
+        log.info(str(miss_or_unexpected_keys))
 
         # Validate model was loaded in with the expected dtype.
         training.validate_expected_param_dtype(
