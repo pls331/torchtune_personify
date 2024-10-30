@@ -639,7 +639,13 @@ class TransformerDecoder(nn.Module):
         if user_idxs is not None:
             assert self.user_prefix_arch is not None
             user_prefix = self.user_prefix_arch(user_idxs) # [b, n_user_token, d]
+<<<<<<< HEAD
             h = torch.cat([user_prefix, h], dim=1) # [b, n_user_token+s, dim_embd]
+=======
+            assert user_prefix
+            h = torch.cat([user_prefix, h], dim=1) # [B, n_user_token+seq_len, dim_embd]
+            seq_len += self.user_prefix_arch.n_user_token
+>>>>>>> 7ec15bb (UserPrefixArch)
 
         hidden = []
         for i, layer in enumerate(self.layers):
