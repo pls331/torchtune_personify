@@ -24,6 +24,7 @@ from torchtune.modules import (
 from torchtune.modules.common_utils import reparametrize_as_dtype_state_dict_post_hook
 
 from torchtune.modules.peft import DoRALinear, LORA_ATTN_MODULES, LoRALinear
+from torchtune_personify.torchtune.modules.personalization.user_prefix_arch import UserPrefixArch
 
 """
 Component builders for the Llama3.2 model and popular variants such as LoRA.
@@ -112,6 +113,12 @@ def llama3_2(
     layers = nn.ModuleList(layers)
 
     tok_embeddings = nn.Embedding(vocab_size, embed_dim)
+    user_prefix_arch = UserPrefixArch(
+        num_user=5,
+        n_user_token=3,
+        emb_dim=512,
+        ffn_dim=512,
+    )
     output_proj = TiedLinear(tok_embeddings)
     return TransformerDecoder(
         tok_embeddings=tok_embeddings,
@@ -121,6 +128,7 @@ def llama3_2(
         head_dim=head_dim,
         norm=RMSNorm(embed_dim, eps=norm_eps),
         output=output_proj,
+        user_prefix_arch=user_prefix_arch,
     )
 
 def llama3_mlp(dim: int, hidden_dim: int, quantize_base: bool = False) -> FeedForward:
