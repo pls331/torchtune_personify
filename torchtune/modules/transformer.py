@@ -367,6 +367,7 @@ class TransformerDecoder(nn.Module):
         output: Union[nn.Linear, Callable],
         num_layers: Optional[int] = None,
         output_hidden_states: Optional[List[int]] = None,
+        user_prefix_arch: Optional[nn.Module] = None,
     ) -> None:
         super().__init__()
         if isinstance(layers, nn.ModuleList):
@@ -394,6 +395,9 @@ class TransformerDecoder(nn.Module):
         # attributes for KV caches during inference
         self.encoder_max_cache_seq_len = None
         self.decoder_max_cache_seq_len = None
+
+        # Personalization
+        self.user_prefix_arch = user_prefix_arch
 
     def set_num_output_chunks(self, num_output_chunks: int) -> None:
         """Used to save memory in combination with :class:`~torchtune.modules.loss.CEWithChunkedOutputLoss`.
@@ -559,6 +563,7 @@ class TransformerDecoder(nn.Module):
         encoder_input: Optional[torch.Tensor] = None,
         encoder_mask: Optional[torch.Tensor] = None,
         input_pos: Optional[torch.Tensor] = None,
+        user_idxs: Optional[torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
         Args:
@@ -628,6 +633,12 @@ class TransformerDecoder(nn.Module):
 
         # shape: [b, s, d]
         h = self.tok_embeddings(tokens)
+        if user_idxs is not None:
+            assert self.user_prefix_arch is not None
+            user_prefix = self.user_prefix_arch(user_idxs) # [b, n_user_token, d]
+            assert user_prefix
+            h = torch.cat([user_prefix, h], dim=1) # [B, n_user_token+seq_len, dim_embd]
+            seq_len += self.user_prefix_arch.n_user_token
 
         hidden = []
         for i, layer in enumerate(self.layers):
