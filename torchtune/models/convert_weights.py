@@ -42,6 +42,9 @@ _FROM_HF = {
     "model.layers.{}.post_attention_layernorm.weight": "layers.{}.mlp_norm.scale",
     "model.norm.weight": "norm.scale",
     "lm_head.weight": "output.weight",
+    "user_prefix_arch.user_prefix_emb.weight": "user_prefix_arch.user_prefix_emb.weight",
+    "user_prefix_arch.mlp.{}.weight": "user_prefix_arch.mlp.{}.weight",
+    "user_prefix_arch.mlp.{}.bias": "user_prefix_arch.mlp.{}.bias"
 }
 
 

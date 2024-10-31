@@ -590,7 +590,11 @@ class FullModelHFCheckpointer(_CheckpointerInterface):
             # split the state_dict into separate dicts, one for each output checkpoint file
             split_state_dicts: Dict[str, Dict[str, torch.Tensor]] = {}
             for key, weight in state_dict[training.MODEL_KEY].items():
-                cpt_idx = self._weight_map[key]
+                if "user_prefix_arch" in key:
+                    # TODO: Hack to write user_prefix_arch.
+                    cpt_idx = list(self._weight_map.values())[0]
+                else:
+                    cpt_idx = self._weight_map[key]
                 if cpt_idx not in split_state_dicts:
                     split_state_dicts[cpt_idx] = {}
                 split_state_dicts[cpt_idx].update({key: weight})
