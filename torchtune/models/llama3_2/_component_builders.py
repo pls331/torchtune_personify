@@ -25,10 +25,6 @@ from torchtune.modules.common_utils import reparametrize_as_dtype_state_dict_pos
 
 from torchtune.modules.peft import DoRALinear, LORA_ATTN_MODULES, LoRALinear
 from torchtune_personify.torchtune.modules.personalization.user_prefix_arch import UserPrefixArch
-<<<<<<< HEAD
-from torchtune_personify.torchtune.modules.personalization.user_prefix_arch import UserPrefixArch
-=======
->>>>>>> 7ec15bb (UserPrefixArch)
 
 """
 Component builders for the Llama3.2 model and popular variants such as LoRA.
