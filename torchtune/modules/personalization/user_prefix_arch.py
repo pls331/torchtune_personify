@@ -38,8 +38,11 @@ class UserPrefixArch(nn.Module):
         assert user_prefix_emb.shape == (
             B,
             1,
-            self.n_user_token * self.ffn_dim,
-        ), (user_prefix_emb.shape, user_idxs.shape[0], self.n_user_token, self.ffn_dim)
+            self.total_emb_dim,
+        ), (
+            f"{user_prefix_emb.shape=}, {user_idxs.shape=}, {self.n_user_token=}," 
+            f"{self.total_emb_dim=}, {self.ffn_dim=}, {self.emb_dim=}"
+        )
         out = self.mlp(user_prefix_emb).view(B, self.n_user_token, -1)
         assert out.shape == (B, self.n_user_token, self.emb_dim)
         return out
