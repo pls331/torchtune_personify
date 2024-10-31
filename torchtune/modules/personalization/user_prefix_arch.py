@@ -17,6 +17,7 @@ class UserPrefixArch(nn.Module):
         ffn_dim: int,
     ) -> None:
         super().__init__()
+        self.num_user = num_user
         self.n_user_token = n_user_token
         self.ffn_dim = ffn_dim
         self.emb_dim = emb_dim

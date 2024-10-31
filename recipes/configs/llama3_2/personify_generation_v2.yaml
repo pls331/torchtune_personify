@@ -1,0 +1,41 @@
+# Config for running the InferenceRecipe in generate_V2.py to generate output from an LLM
+#
+# To launch, run the following command:
+#    tune run dev/generate_v2 --config llama3_2/personify_generation_v2
+
+# Model arguments
+model:
+  _component_: torchtune.models.llama3_2.llama3_2_1b_personify
+  n_user_token: 5
+  num_user: 1
+
+# Transform arguments
+tokenizer:
+  _component_: torchtune.models.llama3.llama3_tokenizer
+  path: /tmp/Llama-3.2-1B-Instruct/original/tokenizer.model
+  max_seq_len: 2048
+
+# Checkpointer
+checkpointer:
+  _component_: torchtune.training.FullModelHFCheckpointer
+  checkpoint_dir: /tmp/Llama-3.2-1B-Instruct/
+  checkpoint_files: [
+    model-00001-of-00001_9.safetensors,
+  ]
+  output_dir: /tmp/Llama-3.2-1B-Instruct/generation_output
+  model_type: LLAMA3_2
+  safe_serialization: True
+
+# Device
+device: cuda
+dtype: bf16
+seed: 1234
+log_level: INFO
+
+# Generation arguments
+prompt:
+  system: You are a helpful and creative AI assistant.
+  user: Where is my hometown?
+max_new_tokens: 200
+temperature: 0.0 # Personal Info QA doesn't require creativity
+top_k: 300

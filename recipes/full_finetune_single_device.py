@@ -141,6 +141,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
         self.seed = training.set_seed(seed=cfg.seed)
         self.epochs_run = 0
         self.total_epochs = cfg.epochs
+        self.dump_every_n_step = cfg.get("dump_every_n_step", 1)
         self.max_steps_per_epoch = cfg.max_steps_per_epoch
         self.global_step = 0
         self._clip_grad_norm = cfg.get("clip_grad_norm", None)
@@ -564,11 +565,13 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 ckpt_dict[training.OPT_KEY] = self._optimizer.state_dict()
             else:
                 ckpt_dict[training.OPT_KEY] = self._optim_ckpt_wrapper.state_dict()
-        self._checkpointer.save_checkpoint(
-            ckpt_dict,
-            epoch=epoch,
-            intermediate_checkpoint=(epoch + 1 < self.total_epochs),
-        )
+
+        if epoch % self.dump_every_n_step == 0 or epoch == self.total_epochs:
+            self._checkpointer.save_checkpoint(
+                ckpt_dict,
+                epoch=epoch,
+                intermediate_checkpoint=(epoch + 1 < self.total_epochs),
+            )
 
     def _loss_step(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
         # Shape [b, s], needed for the loss not the model

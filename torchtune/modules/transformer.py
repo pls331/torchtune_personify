@@ -564,6 +564,7 @@ class TransformerDecoder(nn.Module):
         encoder_mask: Optional[torch.Tensor] = None,
         input_pos: Optional[torch.Tensor] = None,
         user_idxs: Optional[torch.Tensor] = None,
+        is_decoding: bool = False,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
         Args:
@@ -622,10 +623,7 @@ class TransformerDecoder(nn.Module):
         """
         # input tensor of shape [b, s]
         seq_len = tokens.shape[1]
-        # TODO: remove these hack of hardcoded users
-        b = tokens.shape[0]
-        user_idxs = torch.arange(start=0, end=b).view(b, 1).to(tokens.device)
-
+        
         self._validate_inputs(
             seq_len,
             mask=mask,
@@ -636,11 +634,15 @@ class TransformerDecoder(nn.Module):
 
         # shape: [b, s, d]
         h = self.tok_embeddings(tokens)
-        if user_idxs is not None:
-            assert self.user_prefix_arch is not None
+        # TODO: remove these hack of hardcoded users idxs
+        if self.user_prefix_arch is not None and not is_decoding:
+            b = tokens.shape[0]
+            user_idxs = torch.randint(
+                low=0, high=self.user_prefix_arch.num_user, size=(b, 1), device=tokens.device
+            )
             user_prefix = self.user_prefix_arch(user_idxs) # [b, n_user_token, d]
             h = torch.cat([user_prefix, h], dim=1) # [b, n_user_token+s, dim_embd]
-
+        
         hidden = []
         for i, layer in enumerate(self.layers):
             if i in self.output_hidden_states:
@@ -657,9 +659,8 @@ class TransformerDecoder(nn.Module):
         # shape: [b, n_user_token + s, d]
         h = self.norm(h)
 
-        if user_idxs is not None:
-            # remove the user_idx from output token 
-            assert self.user_prefix_arch is not None
+        if self.user_prefix_arch is not None and not is_decoding: # remove the user_idx from output token 
+            assert user_idxs is not None
             h = h[:, self.user_prefix_arch.n_user_token:, :]
             # TODO: h.is_contiguous() is False, we shall avoid creating new copy
             assert h.shape[1] == seq_len, (

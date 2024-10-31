@@ -118,6 +118,11 @@ class InferenceRecipe:
     @torch.inference_mode()
     def generate(self, cfg: DictConfig):
         """The main entry point for generating tokens from a prompt."""
+        n_user_token = (
+            self.model.user_prefix_arch.n_user_token 
+            if self.model.user_prefix_arch else 0
+        )
+
         # 1. Convert input to messages
         messages = self.to_messages(OmegaConf.to_container(cfg.prompt))
         is_multimodal_input = any([m.contains_media for m in messages])
@@ -125,7 +130,7 @@ class InferenceRecipe:
         # 2. Apply model transform
         model_inputs = self.model_transform({"messages": messages}, inference=True)
         seq_len = len(model_inputs["tokens"])
-        total_response_length = seq_len + cfg.max_new_tokens
+        total_response_length = seq_len + cfg.max_new_tokens + n_user_token
 
         # 3. Setup KV cache
         with self._device:
@@ -151,6 +156,7 @@ class InferenceRecipe:
         # 5. Collate to batch size of 1 and tensor-ify
         batch = {}
         if is_multimodal_input:
+            # TODO: support multimodal for personalization
             batch = padded_collate_tiled_images_and_mask(
                 [model_inputs], pad_direction="left", pad_max_images=1
             )
@@ -160,11 +166,12 @@ class InferenceRecipe:
             prompt = torch.tensor(
                 model_inputs["tokens"], device=self._device
             ).unsqueeze(0)
-        batch["mask"] = causal_mask[None, :seq_len]
-        batch["input_pos"] = input_pos[None, :seq_len]
+        batch["mask"] = causal_mask[None, :seq_len + n_user_token]
+        batch["input_pos"] = input_pos[None, :seq_len + n_user_token]
         utils.batch_to_device(batch, self._device)
 
         # 6. Prefill step
+
         generated_tokens = []
         t0 = time.perf_counter()
         logits = self.model(prompt, **batch)[:, -1]
@@ -176,18 +183,19 @@ class InferenceRecipe:
             # processed by the model now
             batch.pop("encoder_input")
             batch["encoder_mask"] = batch["encoder_mask"][:, -1:]
-
+        
+        import pdb; pdb.set_trace()
         # 7. Continue generating
         for i in range(cfg.max_new_tokens):
 
             # Update position and mask for incremental decoding
-            batch["input_pos"] = input_pos[None, seq_len]
-            batch["mask"] = causal_mask[None, seq_len, None, :]
+            batch["input_pos"] = input_pos[None, seq_len + n_user_token]
+            batch["mask"] = causal_mask[None, seq_len + n_user_token, None, :]
 
             if token.item() in self.model_transform.stop_tokens:
                 break
 
-            logits = self.model(token, **batch)[:, -1]
+            logits = self.model(token, **batch, is_decoding=True)[:, -1]
             token = sample(logits, temperature=cfg.temperature, top_k=cfg.top_k)
             generated_tokens.append(token.item())
             seq_len += 1

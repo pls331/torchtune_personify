@@ -52,6 +52,10 @@ _ALL_RECIPES = [
                 file_path="llama3_2/personify_1B_full_single_device.yaml",
             ),
             Config(
+                name="llama3_2/personify_generation_v2",
+                file_path="llama3_2/personify_generation_v2.yaml",
+            ),
+            Config(
                 name="llama3_2/3B_full_single_device",
                 file_path="llama3_2/3B_full_single_device.yaml",
             ),

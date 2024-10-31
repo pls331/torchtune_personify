@@ -53,6 +53,8 @@ def llama3_2(
     intermediate_dim: Optional[int] = None,
     norm_eps: float = 1e-5,
     scale_factor: int = 32,
+    n_user_token: Optional[int] = 5,
+    num_user: Optional[int] = 1,
 ) -> TransformerDecoder:
     """
     Build the decoder associated with the Llama3.2 model. This includes:
@@ -113,12 +115,16 @@ def llama3_2(
     layers = nn.ModuleList(layers)
 
     tok_embeddings = nn.Embedding(vocab_size, embed_dim)
-    user_prefix_arch = UserPrefixArch(
-        num_user=5,
-        n_user_token=5,
-        emb_dim=embed_dim,
-        ffn_dim=embed_dim * 2,
-    )
+
+    user_prefix_arch = None
+    if num_user is not None and n_user_token is not None:
+        user_prefix_arch = UserPrefixArch(
+            num_user=num_user,
+            n_user_token=n_user_token,
+            emb_dim=embed_dim,
+            ffn_dim=embed_dim * 2,
+        )
+
     output_proj = TiedLinear(tok_embeddings)
     return TransformerDecoder(
         tok_embeddings=tok_embeddings,
