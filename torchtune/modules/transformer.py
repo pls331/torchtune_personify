@@ -622,9 +622,9 @@ class TransformerDecoder(nn.Module):
         """
         # input tensor of shape [b, s]
         seq_len = tokens.shape[1]
-        # TODO: remove
+        # TODO: remove these hack of hardcoded users
         b = tokens.shape[0]
-        user_idxs = torch.arange(start=0, end=b).view(10, 1)
+        user_idxs = torch.arange(start=0, end=b).view(b, 1).to(tokens.device)
 
         self._validate_inputs(
             seq_len,
@@ -639,9 +639,7 @@ class TransformerDecoder(nn.Module):
         if user_idxs is not None:
             assert self.user_prefix_arch is not None
             user_prefix = self.user_prefix_arch(user_idxs) # [b, n_user_token, d]
-            assert user_prefix
-            h = torch.cat([user_prefix, h], dim=1) # [B, n_user_token+seq_len, dim_embd]
-            seq_len += self.user_prefix_arch.n_user_token
+            h = torch.cat([user_prefix, h], dim=1) # [b, n_user_token+s, dim_embd]
 
         hidden = []
         for i, layer in enumerate(self.layers):
@@ -656,8 +654,17 @@ class TransformerDecoder(nn.Module):
                 input_pos=input_pos,
             )
 
-        # shape: [b, s, d]
+        # shape: [b, n_user_token + s, d]
         h = self.norm(h)
+
+        if user_idxs is not None:
+            # remove the user_idx from output token 
+            assert self.user_prefix_arch is not None
+            h = h[:, self.user_prefix_arch.n_user_token:, :]
+            # TODO: h.is_contiguous() is False, we shall avoid creating new copy
+            assert h.shape[1] == seq_len, (
+                h.is_contiguous(), h.shape, h.shape[1], seq_len
+            )
 
         if self.num_output_chunks > 0:
             output = self.chunked_output(h)

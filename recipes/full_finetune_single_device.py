@@ -380,7 +380,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
 
 
         miss_or_unexpected_keys = model.load_state_dict(model_state_dict, strict=False)
-        log.info(str(miss_or_unexpected_keys))
+        log.info(f"{miss_or_unexpected_keys=}")
 
         # Validate model was loaded in with the expected dtype.
         training.validate_expected_param_dtype(
@@ -391,6 +391,9 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
         if self._device.type == "cuda":
             memory_stats = training.get_memory_stats(device=self._device)
             training.log_memory_stats(memory_stats)
+            # TODO: this is a hack to transfer these params that is not in the state dict to cuda
+            if model.user_prefix_arch is not None:
+                model.user_prefix_arch.to(self._device)
 
         return model
 
