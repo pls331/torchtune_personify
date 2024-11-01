@@ -34,8 +34,17 @@ log_level: INFO
 
 # Generation arguments
 prompt:
-  system: You are a helpful and creative AI assistant.
-  user: Where is my hometown?
+  # system: You are a helpful and creative AI assistant.
+  # user: Where is my hometown?
+  - user: "What is the user's name?"
+  - user: "What is the user's age?"
+  - user: "What is the occupation?"
+  - user: "What does user like?"
+  - user: "What does user like?"
+  - user: "What does user like?"
+  - user: "Where is user's hometown?"
+  - user: What is the user's age?
+  - user: Where is my hometown?
 max_new_tokens: 200
 temperature: 0.0 # Personal Info QA doesn't require creativity
 top_k: 300

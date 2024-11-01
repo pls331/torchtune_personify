@@ -9,7 +9,7 @@ import time
 from typing import Any, Dict, List
 
 import torch
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, ListConfig
 
 from torchtune import config, training, utils
 from torchtune.data import load_image, Message, padded_collate_tiled_images_and_mask
@@ -171,7 +171,6 @@ class InferenceRecipe:
         utils.batch_to_device(batch, self._device)
 
         # 6. Prefill step
-
         generated_tokens = []
         t0 = time.perf_counter()
         logits = self.model(prompt, **batch)[:, -1]
@@ -184,10 +183,8 @@ class InferenceRecipe:
             batch.pop("encoder_input")
             batch["encoder_mask"] = batch["encoder_mask"][:, -1:]
         
-        import pdb; pdb.set_trace()
         # 7. Continue generating
         for i in range(cfg.max_new_tokens):
-
             # Update position and mask for incremental decoding
             batch["input_pos"] = input_pos[None, seq_len + n_user_token]
             batch["mask"] = causal_mask[None, seq_len + n_user_token, None, :]
@@ -204,7 +201,7 @@ class InferenceRecipe:
 
         # 8. Translate tokens back to text
         decoded = self.model_transform.decode(generated_tokens)
-        self._logger.info(f"\n\n{decoded}\n")
+        self._logger.info(f"\n{messages=}\n{decoded=}\n")
 
         # 9. Log metrics
         tokens_per_second = len(generated_tokens) / t
@@ -213,10 +210,19 @@ class InferenceRecipe:
 
 @config.parse
 def main(cfg: DictConfig) -> None:
+    def impl(cfg: DictConfig):
+        recipe = InferenceRecipe(cfg=cfg)
+        recipe.setup(cfg=cfg)
+        recipe.generate(cfg=cfg)
+
     config.log_config(recipe_name="InferenceRecipe", cfg=cfg)
-    recipe = InferenceRecipe(cfg=cfg)
-    recipe.setup(cfg=cfg)
-    recipe.generate(cfg=cfg)
+    if isinstance(cfg.prompt, ListConfig):
+        lst_prompt = cfg.prompt
+        for prompt in lst_prompt:
+            cfg.prompt = prompt
+            impl(cfg)
+    else:
+        impl(cfg)
 
 
 if __name__ == "__main__":
