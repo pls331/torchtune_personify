@@ -20,7 +20,7 @@ checkpointer:
   _component_: torchtune.training.FullModelHFCheckpointer
   checkpoint_dir: /tmp/Llama-3.2-1B-Instruct/
   checkpoint_files: [
-    model-00001-of-00001_99.safetensors,
+    model-00001-of-00001_0.safetensors,
   ]
   output_dir: /tmp/Llama-3.2-1B-Instruct/generation_output
   model_type: LLAMA3_2
@@ -46,14 +46,24 @@ prompt:
   # - user: What is the user's age?
   # - user: Where is my hometown?
   # - user: "Hi, Chatbot."
-  - system: pls. answer the question based on what you know about the user.
-    user: "what do you know about the user?"
-  - system: pls. answer the question based on what you know about the user.
-    user: "Pls. suggest me something to do during the weekend."
-  - system: pls. answer the question based on what you know about the user.
-    user: "Suggest me a learning path for deep learning."
-  - system: pls. answer the question based on what you know about the user.
-    user: "Give me some advice for my next step in my career."
+  ##
+  # Directly ask the qestions without instruction
+  ##
+  - user: "what do you know about the user?"
+  - user: "Pls. suggest me something to do during the weekend."
+  - user: "Suggest me a learning path for deep learning."
+  - user: "Give me some advice for my next step in my career."
+  ##
+  # 
+  ##
+  # - system: pls. answer the question based on what you know about the user.
+  #   user: "what do you know about me?"
+  # - system: pls. answer the question based on what you know about the user.
+  #   user: "Pls. suggest me something to do during the weekend."
+  # - system: pls. answer the question based on what you know about the user.
+  #   user: "Suggest me a learning path for deep learning."
+  # - system: pls. answer the question based on what you know about the user.
+  #   user: "Give me some advice for my next step in my career."
 max_new_tokens: 200
 temperature: 0.0 # Personal Info QA doesn't require creativity
 top_k: 300

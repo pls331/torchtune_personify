@@ -7,6 +7,7 @@ import itertools
 import sys
 import time
 from typing import Any, Dict, List
+from pprint import pprint
 
 import torch
 from omegaconf import DictConfig, OmegaConf, ListConfig
@@ -206,6 +207,7 @@ class InferenceRecipe:
         # 9. Log metrics
         tokens_per_second = len(generated_tokens) / t
         self.log_metrics(total_time=t, tokens_per_second=tokens_per_second)
+        return f"{messages=}\n{decoded=}"
 
 
 @config.parse
@@ -213,14 +215,17 @@ def main(cfg: DictConfig) -> None:
     def impl(cfg: DictConfig):
         recipe = InferenceRecipe(cfg=cfg)
         recipe.setup(cfg=cfg)
-        recipe.generate(cfg=cfg)
+        return recipe.generate(cfg=cfg)
 
     config.log_config(recipe_name="InferenceRecipe", cfg=cfg)
     if isinstance(cfg.prompt, ListConfig):
+        lst_res = []
         lst_prompt = cfg.prompt
         for prompt in lst_prompt:
             cfg.prompt = prompt
-            impl(cfg)
+            res = impl(cfg)
+            lst_res.append(res)
+        pprint(lst_res)
     else:
         impl(cfg)
 
