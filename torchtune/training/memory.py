@@ -211,8 +211,9 @@ def create_optim_in_bwd_wrapper(
     Returns:
         ``OptimizerInBackwardWrapper``: Wrapper for optimizer states running in backward.
     """
+    param_to_name = {p: n for n, p in model.named_parameters()}
     return OptimizerInBackwardWrapper(
-        {n: optim_dict[p] for n, p in model.named_parameters()}
+        {param_to_name[p]: optim for p, optim in optim_dict.items()}
     )
 
 
@@ -237,8 +238,9 @@ def register_optim_in_bwd_hooks(
         optim_dict[param].step()
         optim_dict[param].zero_grad()
 
-    for p in model.parameters():
-        if p.requires_grad:
+    for n, p in model.named_parameters():
+        if p.requires_grad and p in optim_dict:
+            print(f"{n}, {p.shape}")
             p.register_post_accumulate_grad_hook(optim_step)
 
 

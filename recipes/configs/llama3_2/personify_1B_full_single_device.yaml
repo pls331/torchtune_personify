@@ -55,19 +55,22 @@ checkpointer:
   model_type: LLAMA3_2
   safe_serialization: True
 resume_from_checkpoint: False
-dump_every_n_step: 10
+dump_every_n_step: 1
 
 # Fine-tuning arguments
 batch_size: 4
 epochs: 3
+
 optimizer:
   _component_: bitsandbytes.optim.PagedAdamW8bit
   lr: 2e-5
+trainable_param_regex: ".*user_prefix_arch.*"
+optimizer_in_bwd: True
+
 loss:
   _component_: torchtune.modules.loss.CEWithChunkedOutputLoss
 max_steps_per_epoch: 10
 gradient_accumulation_steps: 1
-optimizer_in_bwd: True
 compile: False # pytorch compile, set to true for perf/memory improvement
 
 # Training environment

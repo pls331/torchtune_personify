@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import re
 import sys
 import time
 from functools import partial
@@ -234,6 +235,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
             opt_state_dict=(
                 ckpt_dict[training.OPT_KEY] if self._resume_from_checkpoint else None
             ),
+            trainable_param_regex=cfg.trainable_param_regex,
         )
 
         # initialize loss
@@ -379,7 +381,6 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 model, auto_wrap_policy={modules.TransformerSelfAttentionLayer}
             )
 
-
         miss_or_unexpected_keys = model.load_state_dict(model_state_dict, strict=False)
         log.info(f"{miss_or_unexpected_keys=}")
 
@@ -403,6 +404,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
         cfg_optimizer: DictConfig,
         optimizer_in_bwd: bool = False,
         opt_state_dict: Optional[Dict[str, Any]] = None,
+        trainable_param_regex: Optional[str] = None,
     ) -> Optional[Optimizer]:
         """
         Set up the optimizer. This method also handles loading the optimizer state_dict, if specified.
@@ -411,7 +413,8 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
             # Maintain a dict of optims for every parameter.
             optim_dict = {
                 p: config.instantiate(cfg_optimizer, [p])
-                for p in self._model.parameters()
+                for name, p in self._model.named_parameters()
+                if trainable_param_regex is None or re.match(trainable_param_regex, name)
             }
             # Register optimizer step hooks on the model to run optimizer in backward.
             training.register_optim_in_bwd_hooks(
