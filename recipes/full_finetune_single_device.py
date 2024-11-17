@@ -235,7 +235,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
             opt_state_dict=(
                 ckpt_dict[training.OPT_KEY] if self._resume_from_checkpoint else None
             ),
-            trainable_param_regex=cfg.trainable_param_regex,
+            trainable_param_regex=cfg.get("trainable_param_regex", None),
         )
 
         # initialize loss

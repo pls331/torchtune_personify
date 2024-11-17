@@ -22,6 +22,7 @@ from torchtune.modules import (
 from torchtune.modules.common_utils import _register_reparametrize_state_dict_hooks
 
 from torchtune.modules.peft import DoRALinear, LORA_ATTN_MODULES, LoRALinear
+from torchtune_personify.torchtune.modules.personalization.user_prefix_arch import UserPrefixArch
 
 """
 Component builders for the Llama3.1 model and popular variants such as LoRA.
@@ -50,6 +51,8 @@ def llama3_1(
     intermediate_dim: Optional[int] = None,
     norm_eps: float = 1e-5,
     scale_factor: int = 8,
+    n_user_token: Optional[int] = 5,
+    num_user: Optional[int] = 1,
 ) -> TransformerDecoder:
     """
     Build the decoder associated with the Llama3.1 model. This includes:
@@ -110,6 +113,16 @@ def llama3_1(
     layers = nn.ModuleList(layers)
 
     tok_embeddings = nn.Embedding(vocab_size, embed_dim)
+
+    user_prefix_arch = None
+    if num_user is not None and n_user_token is not None:
+        user_prefix_arch = UserPrefixArch(
+            num_user=num_user,
+            n_user_token=n_user_token,
+            emb_dim=embed_dim,
+            ffn_dim=embed_dim * 2,
+        )
+
     output_proj = nn.Linear(embed_dim, vocab_size, bias=False)
     return TransformerDecoder(
         tok_embeddings=tok_embeddings,
@@ -119,6 +132,7 @@ def llama3_1(
         head_dim=head_dim,
         norm=RMSNorm(embed_dim, eps=norm_eps),
         output=output_proj,
+        user_prefix_arch=user_prefix_arch,
     )
 
 def llama3_mlp(dim: int, hidden_dim: int, quantize_base: bool = False) -> FeedForward:
