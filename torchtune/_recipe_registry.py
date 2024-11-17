@@ -91,6 +91,10 @@ _ALL_RECIPES = [
                 name="llama3_2_vision/11B_full_single_device",
                 file_path="llama3_2_vision/11B_full_single_device.yaml",
             ),
+            Config(
+                name="llama3_2_embedding/1B_full_single_device",
+                file_path="llama3_2_embedding/1B_full_single_device.yaml",
+            ),
         ],
         supports_distributed=False,
     ),
