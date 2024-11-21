@@ -26,11 +26,19 @@ tokenizer:
   path: /tmp/Llama-3.2-1B-Instruct/original/tokenizer.model
   max_seq_len: null
 
-# TODO: replace with retrieval dataset
+# TODO(pls331): replace with retrieval dataset
 # Dataset
+# dataset:
+#   _component_: torchtune.datasets.alpaca_dataset
+#   packed: False  # True increases speed
 dataset:
-  _component_: torchtune.datasets.alpaca_dataset
-  packed: False  # True increases speed
+  _component_: torchtune.datasets.msmarco_dataset
+  source: sentence-transformers/msmarco-msmarco-distilbert-base-tas-b
+  subset: triplet
+  packed: False
+  cache_dir: /tmp
+collate_fn: torchtune.data.padded_collate_retrieval_triplet
+
 seed: null
 shuffle: True
 
@@ -50,13 +58,20 @@ checkpointer:
 resume_from_checkpoint: False
 
 # Fine-tuning arguments
-batch_size: 4
+batch_size: 16
 epochs: 1
 optimizer:
   _component_: bitsandbytes.optim.PagedAdamW8bit
-  lr: 2e-5
+  lr: 1e-6
 loss:
-  _component_: torchtune.modules.loss.CEWithChunkedOutputLoss
+  # _component_: torchtune.modules.loss.CEWithChunkedOutputLoss
+  # triplet contrastive loss
+  # TODO(pls331): implement InfoNCE
+  _component_: torch.nn.TripletMarginLoss # cosine similarity
+  reduction: mean
+  # TODO(pls331): Pair-wise contrastive loss
+  # _component_: torch.nn.CosineEmbeddingLoss # cosine similarity
+  # _component_: torch.nn.MarginRankingLoss # euclidian distance
 max_steps_per_epoch: null
 gradient_accumulation_steps: 1  # Use to increase virtual batch size
 optimizer_in_bwd: True  # True saves memory. Requires gradient_accumulation_steps=1

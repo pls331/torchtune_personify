@@ -674,6 +674,11 @@ class FullModelHFCheckpointer(_CheckpointerInterface):
                     head_dim=self._config.get("head_dim", None),
                 )
             else:
+                # TODO(pls331): this is a hack, we shall create a separate model type 
+                # for retrieval model and convert the model offline for continued training
+                state_dict[training.MODEL_KEY] = {
+                    k.replace("decoder.", ""): v for k, v in state_dict['model'].items()
+                }
                 state_dict[training.MODEL_KEY] = convert_weights.tune_to_hf(
                     state_dict[training.MODEL_KEY],
                     num_heads=self._config["num_attention_heads"],

@@ -336,9 +336,10 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
         self._profiler = self._setup_profiler(cfg.get(PROFILER_KEY, None))
 
         # Used to ignore labels for loss computation
-        self.ignore_labels_cache = torch.full(
-            (cfg.batch_size, 1), self._loss_fn.ignore_index, device=self._device
-        )
+        if hasattr(self._loss_fn, "ignore_index"):
+            self.ignore_labels_cache = torch.full(
+                (cfg.batch_size, 1), self._loss_fn.ignore_index, device=self._device
+            )
 
     def _setup_profiler(
         self, cfg_profiler: Optional[DictConfig] = None
@@ -429,7 +430,11 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 model, auto_wrap_policy={modules.TransformerSelfAttentionLayer}
             )
 
-        model.load_state_dict(model_state_dict)
+        # TODO(pls331): this is a hack, we shall create a separate model type for retrieval model and convert the model offline
+        if "llama3_2_embedding" in cfg_model["_component_"]:
+            model.decoder.load_state_dict(model_state_dict)
+        else:
+            model.load_state_dict(model_state_dict)
 
         # Validate model was loaded in with the expected dtype.
         training.validate_expected_param_dtype(
@@ -575,6 +580,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
             shuffle=shuffle,
             seed=0,
         )
+        ignore_index = self._loss_fn.ignore_index if hasattr(self._loss_fn, "ignore_index") else None
         dataloader = DataLoader(
             dataset=ds,
             batch_size=batch_size,
@@ -585,7 +591,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 partial(
                     collate_fn,
                     padding_idx=self._tokenizer.pad_id,
-                    ignore_idx=self._loss_fn.ignore_index,
+                    ignore_idx=ignore_index,
                 )
                 if not packed
                 else padded_collate_packed
@@ -616,6 +622,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 ckpt_dict[training.OPT_KEY] = self._optimizer.state_dict()
             else:
                 ckpt_dict[training.OPT_KEY] = self._optim_ckpt_wrapper.state_dict()
+
         self._checkpointer.save_checkpoint(
             ckpt_dict,
             epoch=epoch,
@@ -643,8 +650,13 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
         loss = self._loss_fn(logits, labels)
         # free logits otherwise it peaks backward memory
         del logits
-
         return loss
+    
+    def _contrastive_loss_step(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """
+        batch: 
+        - question (anchor)
+        """
 
     def train(self) -> None:
         """
@@ -672,6 +684,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
             self._sampler.set_epoch(curr_epoch)
 
             pbar = tqdm(total=self._steps_per_epoch)
+
             for idx, batch in enumerate(self._dataloader):
                 if (
                     self.max_steps_per_epoch is not None
@@ -690,16 +703,30 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
 
                 utils.batch_to_device(batch, self._device)
 
-                # Calculate the number of unmasked tokens in the current batch
-                # and increment the total number of tokens seen in the step
-                current_num_tokens = (
-                    batch["labels"] != self._loss_fn.ignore_index
-                ).sum()
-                num_tokens += current_num_tokens
+                if isinstance(self._loss_fn, torch.nn.TripletMarginLoss):
+                    # triplet: (query, positive, negative)
+                    # import pdb; pdb.set_trace()
+                    query, pos, neg = batch["query"], batch["positive"], batch["negative"]
+                    with self.activations_handling_ctx:
+                        emb_query = self._model(query)
+                        emb_pos= self._model(pos)
+                        emb_neg = self._model(neg)
+                    current_loss = self._loss_fn(emb_query, emb_pos, emb_neg)
+                    # TODO(pls331): support gradient accumulation
+                    # Use batch size (num stample) as num_tokens for embedding model
+                    num_tokens += emb_query.size(0)
+                else:
+                    # Calculate the number of unmasked tokens in the current batch
+                    # and increment the total number of tokens seen in the step
+                    current_num_tokens = (
+                        batch["labels"] != self._loss_fn.ignore_index
+                    ).sum()
+                    num_tokens += current_num_tokens
 
-                # Loss is normalized by default so we multiply by the number of tokens
-                # This way we can normalize by the total number of tokens if we're accumulating gradients
-                current_loss = self._loss_step(batch) * current_num_tokens
+                    # Loss is normalized by default so we multiply by the number of tokens
+                    # This way we can normalize by the total number of tokens if we're accumulating gradients
+                    current_loss = self._loss_step(batch) * current_num_tokens
+
                 running_loss += current_loss
                 current_loss.backward()
 

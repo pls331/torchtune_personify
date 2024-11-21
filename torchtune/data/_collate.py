@@ -214,6 +214,34 @@ def padded_collate_sft(
         )
     return {"tokens": input_ids.long(), "labels": labels.long()}
 
+def padded_collate_retrieval_triplet(
+    batch: List[Dict[str, List[int]]],
+    padding_idx: int = 0,
+    ignore_idx: int = CROSS_ENTROPY_IGNORE_IDX,
+) -> Dict[str, torch.Tensor]:
+    query = pad_sequence(
+        [torch.tensor(x["query"]) for x in batch],
+        batch_first=True,
+        padding_value=padding_idx,
+    )
+    positive = pad_sequence(
+        [torch.tensor(x["positive"]) for x in batch],
+        batch_first=True,
+        padding_value=padding_idx,
+    )
+    negative = pad_sequence(
+        [torch.tensor(x["negative"]) for x in batch],
+        batch_first=True,
+        padding_value=padding_idx,
+    )
+    # we don't have to pad these 3 sets into same length 
+    # because they will be pooled into embedding of same dim
+    return {
+        "query": query.long(),
+        "positive": positive.long(),
+        "negative": negative.long(),
+    }
+
 
 # TODO: Generalize this to support any type of encoder input, right now this assumes
 # a specific encoder_input signature

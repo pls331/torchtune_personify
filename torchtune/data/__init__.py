@@ -11,6 +11,7 @@ from torchtune.data._collate import (
     padded_collate_packed,
     padded_collate_sft,
     padded_collate_tiled_images_and_mask,
+    padded_collate_retrieval_triplet,
 )
 from torchtune.data._common import CROSS_ENTROPY_IGNORE_IDX
 from torchtune.data._messages import (
@@ -58,4 +59,5 @@ __all__ = [
     "padded_collate_tiled_images_and_mask",
     "padded_collate_packed",
     "load_image",
+    "padded_collate_retrieval_triplet",
 ]

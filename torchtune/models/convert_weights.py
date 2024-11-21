@@ -56,6 +56,7 @@ def get_mapped_key(key: str, mapping_dict: Dict[str, str]) -> str:
         else:
             new_key = mapping_dict[key]
     except KeyError as e:
+        import pdb; pdb.set_trace()
         raise Exception(
             f'Error converting the state dict. Found unexpected key: "{key}". '
             "Please make sure you're loading a checkpoint with the right format. "
