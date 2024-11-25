@@ -26,11 +26,6 @@ tokenizer:
   path: /tmp/Llama-3.2-1B-Instruct/original/tokenizer.model
   max_seq_len: null
 
-# TODO(pls331): replace with retrieval dataset
-# Dataset
-# dataset:
-#   _component_: torchtune.datasets.alpaca_dataset
-#   packed: False  # True increases speed
 dataset:
   _component_: torchtune.datasets.msmarco_dataset
   source: sentence-transformers/msmarco-msmarco-distilbert-base-tas-b
@@ -58,17 +53,17 @@ checkpointer:
 resume_from_checkpoint: False
 
 # Fine-tuning arguments
-batch_size: 16
+batch_size: 32
 epochs: 1
 optimizer:
   _component_: bitsandbytes.optim.PagedAdamW8bit
-  lr: 1e-6
+  lr: 3e-7
 loss:
   # _component_: torchtune.modules.loss.CEWithChunkedOutputLoss
   # triplet contrastive loss
   # TODO(pls331): implement InfoNCE
   _component_: torch.nn.TripletMarginLoss # cosine similarity
-  reduction: mean
+  reduction: sum
   # TODO(pls331): Pair-wise contrastive loss
   # _component_: torch.nn.CosineEmbeddingLoss # cosine similarity
   # _component_: torch.nn.MarginRankingLoss # euclidian distance

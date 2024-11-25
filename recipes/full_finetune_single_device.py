@@ -430,7 +430,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 model, auto_wrap_policy={modules.TransformerSelfAttentionLayer}
             )
 
-        # TODO(pls331): this is a hack, we shall create a separate model type for retrieval model and convert the model offline
+        # TODO(pls331): this is maybe a hack, should we create a separate model type for retrieval model and convert the model offline
         if "llama3_2_embedding" in cfg_model["_component_"]:
             model.decoder.load_state_dict(model_state_dict)
         else:

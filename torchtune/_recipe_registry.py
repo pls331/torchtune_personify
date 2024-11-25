@@ -438,6 +438,17 @@ _ALL_RECIPES = [
         supports_distributed=True,
     ),
     Recipe(
+        name="dev/eval_mteb",
+        file_path="dev/eval_mteb.py",
+        configs=[
+            Config(
+                name="llama3_2_embedding/eval_mteb",
+                file_path="llama3_2_embedding/eval_mteb.yaml",
+            ),
+        ],
+        supports_distributed=False,
+    ),
+    Recipe(
         name="eleuther_eval",
         file_path="eleuther_eval.py",
         configs=[
