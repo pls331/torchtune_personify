@@ -7,26 +7,13 @@
 
 # Model arguments
 model:
-  _component_: torchtune.models.llama3_2_embedding.llama3_2_1b_text_encoder
+  _component_: torchtune.models.llama3_2_embedding.text_encoder_random
 
 # Transform arguments
 tokenizer:
   _component_: torchtune.models.llama3.llama3_tokenizer
   path: /tmp/Llama-3.2-1B-Instruct/original/tokenizer.model
   max_seq_len: 2048
-
-# Checkpointer
-checkpointer:
-  _component_: torchtune.training.FullModelHFCheckpointer
-  checkpoint_dir: /tmp/Llama-3.2-1B-Instruct/
-  checkpoint_files: [
-    # Orignal checkpoint files
-    model.safetensors 
-    # TODO: ms-marco 1 epoch in a new file
-  ]
-  recipe_checkpoint: null
-  output_dir: /tmp/Llama-3.2-1B-Instruct/
-  model_type: LLAMA3_2
 
 # Device
 device: cuda
@@ -36,7 +23,8 @@ log_level: INFO
 
 # Eval arguments
 eval:
-  output_dir: /tmp/Llama-3.2-1B-Instruct/eval_output
+  output_dir: /tmp/eval_output
+  output_filename: eval_result__random.json 
   mteb:
     batch_size: 256
     task_selectors: 

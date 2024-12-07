@@ -442,8 +442,16 @@ _ALL_RECIPES = [
         file_path="dev/eval_mteb.py",
         configs=[
             Config(
-                name="llama3_2_embedding/eval_mteb",
-                file_path="llama3_2_embedding/eval_mteb.yaml",
+                name="llama3_2_embedding/eval_mteb_llama3_2_1b",
+                file_path="llama3_2_embedding/eval_mteb_llama3_2_1b.yaml",
+            ),
+            Config(
+                name="llama3_2_embedding/eval_mteb_random",
+                file_path="llama3_2_embedding/eval_mteb_random.yaml",
+            ),
+            Config(
+                name="llama3_2_embedding/eval_mteb_sentence_transformer",
+                file_path="llama3_2_embedding/eval_mteb_sentence_transformer.yaml",
             ),
         ],
         supports_distributed=False,

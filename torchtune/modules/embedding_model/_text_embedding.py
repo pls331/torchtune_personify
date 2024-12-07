@@ -92,4 +92,12 @@ class TextEmbeddingTransformerDecoder(nn.Module):
         return pooled_emb.squeeze(1) # [b, 1, d] -> [b, d]
 
             
+class RandomEmbeddingModel(torch.nn.Module):
+    def __init__(self, embed_dim=512) -> None:
+        super().__init__()
+        self.embd_dim: int = embed_dim
 
+    def forward(
+        self, tokens: torch.Tensor, batch_seqlen: torch.Tensor, *args, **kwargs
+    ) -> torch.Tensor:
+        return torch.randn(tokens.size(0), self.embd_dim)

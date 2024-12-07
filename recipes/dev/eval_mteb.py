@@ -4,27 +4,33 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import itertools
+import json
+import logging
 import random
 import sys
 import time
 from typing import Any, Dict, List, Optional, Sequence
 
 import torch
-import mteb
+from omegaconf import DictConfig, OmegaConf
 import numpy as np
 import tqdm
 
+from sentence_transformers import SentenceTransformer
+
+import mteb
 from mteb.encoder_interface import PromptType
 from mteb.model_meta import ModelMeta
 from mteb.encoder_interface import Encoder
 from mteb.models.wrapper import Wrapper
-from omegaconf import DictConfig, OmegaConf
+
 from torchtune import config, training, utils
 from torchtune.data import load_image, Message, padded_collate_tiled_images_and_mask
 from torchtune.generation import sample
 from torchtune.modules.tokenizers._utils import ModelTokenizer
 from torchtune.modules.transforms import Transform
 
+log = utils.get_logger("DEBUG")
 
 class MTEBModelWrapper(Encoder, Wrapper):
     def __init__(
@@ -112,11 +118,11 @@ class MTEBModelWrapper(Encoder, Wrapper):
                 end = min(start + batch_size, len(lst_tokens))
                 batch_tokens: List[torch.Tensor] = lst_tokens[start:end]
                 # batching_masks = torch.zeros(max_seqlen, dtype=torch.bool, device=self._device)
-                batch_seqlen = torch.tensor( # B
+                batch_seqlen = torch.tensor(  # B
                     [t.size(0) for t in batch_tokens], dtype=torch.int
                 )
                 max_seqlen = torch.max(batch_seqlen).item()
-                batch_tokens_padded = torch.zeros( # [BS, max_seqlen]
+                batch_tokens_padded = torch.zeros(  # [BS, max_seqlen]
                     (end - start, max_seqlen), dtype=torch.long, device=self._device
                 )
                 for i, t in enumerate(batch_tokens):
@@ -131,12 +137,12 @@ class MTEBModelWrapper(Encoder, Wrapper):
         with torch.inference_mode():
             embeddings = []
             for i in tqdm.tqdm(
-                range(len(lst_batch_tokens)), # num_batch x [B, max_seqlen(i)]
+                range(len(lst_batch_tokens)),  # num_batch x [B, max_seqlen(i)]
                 desc="Encoding Embeddings",
                 disable=not show_progress_bar,
             ):
                 tokens = lst_batch_tokens[i]
-                batch_seqlen = lst_batch_seqlen[i] if lst_batch_seqlen else None # [B]
+                batch_seqlen = lst_batch_seqlen[i] if lst_batch_seqlen else None  # [B]
                 emb = self.model(tokens, batch_seqlen=batch_seqlen).detach().float().cpu().squeeze(0).numpy()
                 embeddings.append(emb)
         res = np.concatenate(embeddings, axis=0)
@@ -158,7 +164,7 @@ class EvalRecipe:
     """
 
     def __init__(self, cfg: DictConfig) -> None:
-        self._device: torch.device = utils.get_device(device=cfg.device)
+        self._device: torch.device = utils.get_device(device=cfg.get("device", "cpu"))
         self._dtype: torch.dtype = training.get_dtype(
             dtype=cfg.dtype, device=self._device
         )
@@ -170,27 +176,32 @@ class EvalRecipe:
 
     def setup(self, cfg: DictConfig) -> None:
         """Setup the model and transforms."""
-        # Load checkpointer and state_dict
-        _checkpointer = config.instantiate(cfg.checkpointer)
-        _ckpt_dict = _checkpointer.load_checkpoint()
-
         # Instantiate transforms
         self.tokenizer = config.instantiate(cfg.tokenizer)
 
         # Instantiate model
         with training.set_default_dtype(self._dtype), self._device:
             model = config.instantiate(cfg.model)
-        assert hasattr(model, "decoder")
-        model.decoder.load_state_dict(_ckpt_dict[training.MODEL_KEY])
 
-        self._embedding_model = model
-        self.model = MTEBModelWrapper(
-            model=model,
-            tokenizer=self.tokenizer,
-            use_query_inst_format=True,
-            device=self._device,
-        )
-        self._logger.info(f"Model was initialized with precision {self._dtype}.")
+        if isinstance(model, SentenceTransformer):
+            self.model = model
+        else:
+            if hasattr(model, "decoder"): # for TextEmbeddingTransformerDecoder
+                # Load checkpointer and state_dict
+                _checkpointer = config.instantiate(cfg.checkpointer)
+                _ckpt_dict = _checkpointer.load_checkpoint()
+
+                model.decoder.load_state_dict(_ckpt_dict[training.MODEL_KEY])
+                log.info(f"Loaded model weights from checkpoint.")
+                log.info(f"Model was initialized with precision {self._dtype}.")
+
+            self._embedding_model = model
+            self.model = MTEBModelWrapper( 
+                model=model,
+                tokenizer=self.tokenizer,
+                use_query_inst_format=True,
+                device=self._device,
+            )
 
     def evaluate(self, cfg: DictConfig) -> None:
         """Evaluate the model using MTEB benchmark."""
@@ -204,13 +215,20 @@ class EvalRecipe:
         selected_tasks = [task]
         assert len(selected_tasks) > 0, "No tasks selected for evaluation."
         evaluation = mteb.MTEB(tasks=selected_tasks)
-        evaluation.run(
-            model=self.model, 
-            output_dir=cfg.eval.output_dir, 
+        lst_results = evaluation.run(
+            model=self.model,
+            output_dir=cfg.eval.output_dir,
             encode_kwargs={
                 "batch_size": cfg.eval.mteb.batch_size,
             },
         )
+
+        output_dir = cfg.eval.output_dir
+        filename = cfg.eval.output_filename
+        with open(f"{output_dir}/{filename}", "w") as f:
+            json.dump([x.to_dict() for x in lst_results], f, indent=4)
+            log.info(f"Results are saved to {output_dir}/{filename}.")
+        
 
 
 @config.parse
@@ -222,4 +240,16 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    import mteb
+
+    # from sentence_transformers import SentenceTransformer
+
+    # # Define the sentence-transformers model name
+    # model_name = "average_word_embeddings_komninos"
+
+    # model = mteb.get_model(model_name) # if the model is not implemented in MTEB it will be eq. to SentenceTransformer(model_name)
+    # tasks = mteb.get_tasks(tasks=["Banking77Classification"])
+    # evaluation = mteb.MTEB(tasks=tasks)
+    # results = evaluation.run(model, output_folder=f"results/{model_name}")
+    # print(results)
     sys.exit(main())

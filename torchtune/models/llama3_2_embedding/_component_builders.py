@@ -38,7 +38,6 @@ can take either nn.Linear or nn.LoRALinear for ``q_proj``.
 the building blocks simple.
 """
 
-
 # ------------------ Llama3.2 - Text Encoder ------------------
 
 def llama3_2_text_encoder(
@@ -106,3 +105,7 @@ def llama3_mlp(dim: int, hidden_dim: int, quantize_base: bool = False) -> FeedFo
     down_proj = nn.Linear(hidden_dim, dim, bias=False) if not quantize_base else FrozenNF4Linear(hidden_dim, dim, bias=False)
     up_proj = nn.Linear(dim, hidden_dim, bias=False) if not quantize_base else FrozenNF4Linear(dim, hidden_dim, bias=False)
     return FeedForward(gate_proj=gate_proj, down_proj=down_proj, up_proj=up_proj)
+
+
+    
+

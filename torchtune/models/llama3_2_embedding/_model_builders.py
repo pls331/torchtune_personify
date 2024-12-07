@@ -9,8 +9,9 @@ from functools import partial
 from torchtune.models.llama3_2._component_builders import llama3_2
 from torchtune.models.llama3_2_embedding._component_builders import llama3_2_text_encoder
 
+
 from torchtune.modules import TransformerDecoder
-from torchtune.modules.embedding_model import TextEmbeddingTransformerDecoder
+from torchtune.modules.embedding_model import TextEmbeddingTransformerDecoder, RandomEmbeddingModel
 
 def llama3_2_1b() -> TransformerDecoder:
     """
@@ -78,3 +79,6 @@ def llama3_2_3b_text_encoder(emb_pooling: str = "mean") -> TextEmbeddingTransfor
         scale_factor=32,
         emb_pooling=emb_pooling,
     )
+
+def text_encoder_random(embed_dim=512) -> RandomEmbeddingModel:
+    return RandomEmbeddingModel(embed_dim=embed_dim)
