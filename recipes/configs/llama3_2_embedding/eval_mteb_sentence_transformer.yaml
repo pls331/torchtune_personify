@@ -6,24 +6,9 @@
 #    tune run dev/eval_mteb --config llama3_2_embedding\eval_mteb_sentence_transformer
 
 # Model arguments
-# model:
-#   _component_: sentence_transformers.SentenceTransformer
-#   model_name_or_path: intfloat/multilingual-e5-large
-#   device: cuda
-#   prompts:
-#     ##
-#     # task_name : "Prompt for the task"
-#     # To be compatible with MTEB, task_name must be one of those 
-#     # defined in mteb.abstasks.TaskMetadata.TASK_TYPE
-#     ##
-#     Classification: "Classify the following text: "
-#     Retrieval: "Retrieve semantically similar text: "
-#     Clustering: "Identify the topic or theme based on the text: "
-
 model:
   _component_: sentence_transformers.SentenceTransformer
-  # https://huggingface.co/blevlabs/stella_en_v5
-  model_name_or_path: blevlabs/stella_en_v5
+  model_name_or_path: intfloat/multilingual-e5-large
   device: cuda
   prompts:
     ##
@@ -31,10 +16,25 @@ model:
     # To be compatible with MTEB, task_name must be one of those 
     # defined in mteb.abstasks.TaskMetadata.TASK_TYPE
     ##
-    # s2s task
-    # Retrieval: "Instruct: Retrieve semantically similar text.\nQuery: "
-    # s2p task
-    Retrieval: "Instruct: Given a web search query, retrieve relevant passages that answer the query.\nQuery: "
+    Classification: "Classify the following text: "
+    Retrieval: "Retrieve semantically similar text: "
+    Clustering: "Identify the topic or theme based on the text: "
+
+# model:
+#   _component_: sentence_transformers.SentenceTransformer
+#   # https://huggingface.co/blevlabs/stella_en_v5
+#   model_name_or_path: blevlabs/stella_en_v5
+#   device: cuda
+#   prompts:
+#     ##
+#     # task_name : "Prompt for the task"
+#     # To be compatible with MTEB, task_name must be one of those 
+#     # defined in mteb.abstasks.TaskMetadata.TASK_TYPE
+#     ##
+#     # s2s task
+#     # Retrieval: "Instruct: Retrieve semantically similar text.\nQuery: "
+#     # s2p task
+#     Retrieval: "Instruct: Given a web search query, retrieve relevant passages that answer the query.\nQuery: "
 
 # Eval arguments
 eval:

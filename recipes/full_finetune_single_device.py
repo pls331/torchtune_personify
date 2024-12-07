@@ -708,9 +708,9 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                     # import pdb; pdb.set_trace()
                     query, pos, neg = batch["query"], batch["positive"], batch["negative"]
                     with self.activations_handling_ctx:
-                        emb_query = self._model(query)
-                        emb_pos= self._model(pos)
-                        emb_neg = self._model(neg)
+                        emb_query = self._model(tokens=query[0], batch_seqlen=query[1])
+                        emb_pos = self._model(tokens=pos[0], batch_seqlen=pos[1])
+                        emb_neg = self._model(tokens=neg[0], batch_seqlen=neg[1])
                     current_loss = self._loss_fn(emb_query, emb_pos, emb_neg)
                     # TODO(pls331): support gradient accumulation
                     # Use batch size (num stample) as num_tokens for embedding model

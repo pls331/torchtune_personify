@@ -218,7 +218,8 @@ def padded_collate_retrieval_triplet(
     batch: List[Dict[str, List[int]]],
     padding_idx: int = 0,
     ignore_idx: int = CROSS_ENTROPY_IGNORE_IDX,
-) -> Dict[str, torch.Tensor]:
+) -> Dict[str, Tuple[torch.Tensor]]:
+    # Batch the tokens
     query = pad_sequence(
         [torch.tensor(x["query"]) for x in batch],
         batch_first=True,
@@ -234,12 +235,22 @@ def padded_collate_retrieval_triplet(
         batch_first=True,
         padding_value=padding_idx,
     )
+    # Sequence length for each sample in batch
+    batch_seqlen_query = torch.tensor(
+        [len(x["query"]) for x in batch], dtype=torch.int
+    )
+    batch_seqlen_positive = torch.tensor(
+        [len(x["positive"]) for x in batch], dtype=torch.int
+    )
+    batch_seqlen_negative = torch.tensor(
+        [len(x["negative"]) for x in batch], dtype=torch.int
+    )
     # we don't have to pad these 3 sets into same length 
     # because they will be pooled into embedding of same dim
     return {
-        "query": query.long(),
-        "positive": positive.long(),
-        "negative": negative.long(),
+        "query": (query.long(), batch_seqlen_query),
+        "positive": (positive.long(), batch_seqlen_positive),
+        "negative": (negative.long(), batch_seqlen_negative),
     }
 
 

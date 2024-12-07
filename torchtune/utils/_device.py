@@ -176,6 +176,8 @@ def batch_to_device(batch: dict, device: torch.device) -> None:
             batch[k] = v.to(device)
         elif _SUPPORTS_FLEX_ATTENTION and isinstance(v, BlockMask):
             batch[k] = v.to(device)
+        elif isinstance(v, tuple):
+            batch[k] = tuple(t.to(device) for t in v)
         else:
             raise ValueError(
                 f"""To use batch_to_device, all elements in the batch must be a dict or Tensor.
