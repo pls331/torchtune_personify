@@ -22,7 +22,8 @@ checkpointer:
   checkpoint_files: [
     # Orignal checkpoint files
     model.safetensors 
-    # TODO: ms-marco 1 epoch in a new file
+    # ms-marco 2 epoch in a new file
+    # hf_model_0001_0.pt
   ]
   recipe_checkpoint: null
   output_dir: /tmp/Llama-3.2-1B-Instruct/

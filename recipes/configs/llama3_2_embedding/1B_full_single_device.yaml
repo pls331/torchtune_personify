@@ -53,7 +53,7 @@ checkpointer:
 resume_from_checkpoint: False
 
 # Fine-tuning arguments
-batch_size: 32
+batch_size: 64
 epochs: 1
 optimizer:
   _component_: bitsandbytes.optim.PagedAdamW8bit
@@ -67,17 +67,17 @@ loss:
   # TODO(pls331): Pair-wise contrastive loss
   # _component_: torch.nn.CosineEmbeddingLoss # cosine similarity
   # _component_: torch.nn.MarginRankingLoss # euclidian distance
-max_steps_per_epoch: null
+max_steps_per_epoch: 50
 gradient_accumulation_steps: 1  # Use to increase virtual batch size
-optimizer_in_bwd: True  # True saves memory. Requires gradient_accumulation_steps=1
-compile: False  # pytorch compile, set to true for better perf/memory
+optimizer_in_bwd: False # True saves memory. Requires gradient_accumulation_steps=1
+compile: True # pytorch compile, set to true for better perf/memory
 
 # Training environment
 device: cuda
 
 # Memory management
-enable_activation_checkpointing: False  # True reduces memory
-enable_activation_offloading: False  # True reduces memory
+enable_activation_checkpointing: True # True reduces memory
+enable_activation_offloading: False # True reduces memory
 
 # Reduced precision
 dtype: bf16
@@ -90,10 +90,10 @@ output_dir: /tmp/full-llama3.2-finetune
 log_every_n_steps: 1
 log_peak_memory_stats: True
 
-# Profiler (disabled)
+# Profiler 
 profiler:
   _component_: torchtune.training.setup_torch_profiler
-  enabled: False
+  enabled: True
 
   #Output directory of trace artifacts
   output_dir: ${output_dir}/profiling_outputs
@@ -103,10 +103,10 @@ profiler:
   cuda: True
 
   #trace options passed to `torch.profiler.profile`
-  profile_memory: False
-  with_stack: False
+  profile_memory: True
+  with_stack: True
   record_shapes: True
-  with_flops: False
+  with_flops: True
 
   # `torch.profiler.schedule` options:
   # wait_steps -> wait, warmup_steps -> warmup, active_steps -> active, num_cycles -> repeat
