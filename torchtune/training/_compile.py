@@ -15,6 +15,7 @@ from torchtune.modules import (
     TransformerDecoder,
     TransformerSelfAttentionLayer,
 )
+from torchtune.modules.embedding_model import TextEmbeddingTransformerDecoder
 from torchtune.modules.loss import (
     CEWithChunkedOutputLoss,
     ForwardKLWithChunkedOutputLoss,
@@ -26,7 +27,11 @@ log = get_logger("INFO")
 
 
 def compile_model(
-    model: Union[TransformerDecoder, DeepFusionModel],
+    model: Union[
+        TransformerDecoder,
+        DeepFusionModel,
+        TextEmbeddingTransformerDecoder,
+    ],
     verbose: bool = True,
 ) -> None:
     """
@@ -43,7 +48,9 @@ def compile_model(
 
     """
     backend = os.environ.get("TORCH_COMPILE_BACKEND", "inductor")
-    if isinstance(model, DeepFusionModel):
+    if isinstance(model, DeepFusionModel) or isinstance(
+        model, TextEmbeddingTransformerDecoder
+    ):
         model = model.decoder
     # Per-layer compilation by default
     if verbose:

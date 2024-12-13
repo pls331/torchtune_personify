@@ -592,10 +592,12 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                     collate_fn,
                     padding_idx=self._tokenizer.pad_id,
                     ignore_idx=ignore_index,
+                    max_padding_len=cfg_dataset.get("max_padding_len", None),
                 )
                 if not packed
                 else padded_collate_packed
             ),
+            pin_memory=cfg_dataset.pin_memory,
         )
 
         log.info("Dataset and Sampler are initialized.")
@@ -705,7 +707,6 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
 
                 if isinstance(self._loss_fn, torch.nn.TripletMarginLoss):
                     # triplet: (query, positive, negative)
-                    # import pdb; pdb.set_trace()
                     query, pos, neg = batch["query"], batch["positive"], batch["negative"]
                     with self.activations_handling_ctx:
                         emb_query = self._model(tokens=query[0], batch_seqlen=query[1])

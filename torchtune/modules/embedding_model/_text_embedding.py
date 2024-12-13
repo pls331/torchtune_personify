@@ -18,17 +18,17 @@ class PoolingType:
     # 1.Muennighoff, N. SGPT: GPT Sentence Embeddings for Semantic Search. arXiv (2022) doi:10.48550/arxiv.2202.08904.
     POS_W_MEAN = "pos_w_mean"
 
-def get_pos_w(batch_seqlen: torch.Tensor, d: int, pooling_type:PoolingType):
+def get_pos_w(batch_seqlen: torch.Tensor, S: int, d: int, pooling_type:PoolingType):
     B = batch_seqlen.size(0)
-    max_seqlen = torch.max(batch_seqlen).item()
+    max_seqlen = S
     pos_w = torch.zeros((B, max_seqlen), dtype=torch.int, device=batch_seqlen.device)
 
     for i in range(B):
         S = batch_seqlen[i].item()
         if pooling_type == PoolingType.POS_W_MEAN: 
-            pos_w[i, :S] = torch.arange(S) + 1
+            pos_w[i, -S:] = torch.arange(S) + 1
         else:
-            pos_w[i, :S] = 1
+            pos_w[i, -S:] = 1
 
     if pooling_type == PoolingType.SUM: 
         return pos_w
@@ -83,7 +83,7 @@ class TextEmbeddingTransformerDecoder(nn.Module):
             # EOS is not always the last token because of padding
             pooled_emb = h_last_layer[:, -1, :]
         elif self.emb_pooling in {PoolingType.SUM, PoolingType.MEAN, PoolingType.POS_W_MEAN}:
-            pos_w = get_pos_w(batch_seqlen, d, self.emb_pooling)
+            pos_w = get_pos_w(batch_seqlen, S, d, self.emb_pooling)
             h_last_layer = pos_w * h_last_layer
             pooled_emb = torch.sum(h_last_layer, dim=1, keepdim=True)
         else:

@@ -315,6 +315,12 @@ class TensorBoardLogger(MetricLoggerInterface):
             self._writer.close()
             self._writer = None
 
+    def log_config(self, config: DictConfig) -> None:
+        self._writer.add_text(
+            tag="config",
+            text_string=str(config),
+        )
+
     def close(self) -> None:
         if self._writer:
             self._writer.close()

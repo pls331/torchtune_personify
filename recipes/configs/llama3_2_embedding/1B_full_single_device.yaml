@@ -20,6 +20,9 @@
 # This config works only for training on single device.
 
 
+# TODO(pls331): 
+# - Enable 1) Packed Dataset and 2) activation offloading: https://github.com/pytorch/torchtune?tab=readme-ov-file#optimization-flags 
+
 # Tokenizer
 tokenizer:
   _component_: torchtune.models.llama3.llama3_tokenizer
@@ -32,6 +35,8 @@ dataset:
   subset: triplet
   packed: False
   cache_dir: /tmp
+  pin_memory: True
+  max_padding_len: 128
 collate_fn: torchtune.data.padded_collate_retrieval_triplet
 
 seed: null
@@ -53,11 +58,11 @@ checkpointer:
 resume_from_checkpoint: False
 
 # Fine-tuning arguments
-batch_size: 64
+batch_size: 96
 epochs: 1
 optimizer:
   _component_: bitsandbytes.optim.PagedAdamW8bit
-  lr: 3e-7
+  lr: 3e-8
 loss:
   # _component_: torchtune.modules.loss.CEWithChunkedOutputLoss
   # triplet contrastive loss
@@ -67,9 +72,9 @@ loss:
   # TODO(pls331): Pair-wise contrastive loss
   # _component_: torch.nn.CosineEmbeddingLoss # cosine similarity
   # _component_: torch.nn.MarginRankingLoss # euclidian distance
-max_steps_per_epoch: 50
+max_steps_per_epoch: null
 gradient_accumulation_steps: 1  # Use to increase virtual batch size
-optimizer_in_bwd: False # True saves memory. Requires gradient_accumulation_steps=1
+optimizer_in_bwd: True # True saves memory. Requires gradient_accumulation_steps=1
 compile: True # pytorch compile, set to true for better perf/memory
 
 # Training environment
@@ -84,8 +89,13 @@ dtype: bf16
 
 # Logging
 metric_logger:
-  _component_: torchtune.training.metric_logging.DiskLogger
+  # _component_: torchtune.training.metric_logging.DiskLogger
+  # log_dir: ${output_dir}
+  _component_: torchtune.training.metric_logging.TensorBoardLogger
   log_dir: ${output_dir}
+  # _component_: torchtune.training.metric_logging.WandBLogger
+  # log_dir: ${output_dir}
+  # project: llama3.2-1b-instruct
 output_dir: /tmp/full-llama3.2-finetune
 log_every_n_steps: 1
 log_peak_memory_stats: True
@@ -93,7 +103,7 @@ log_peak_memory_stats: True
 # Profiler 
 profiler:
   _component_: torchtune.training.setup_torch_profiler
-  enabled: True
+  enabled: False
 
   #Output directory of trace artifacts
   output_dir: ${output_dir}/profiling_outputs

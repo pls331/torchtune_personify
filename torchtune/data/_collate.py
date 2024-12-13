@@ -216,41 +216,53 @@ def padded_collate_sft(
 
 def padded_collate_retrieval_triplet(
     batch: List[Dict[str, List[int]]],
+    max_padding_len: Optional[int] = None,
     padding_idx: int = 0,
     ignore_idx: int = CROSS_ENTROPY_IGNORE_IDX,
 ) -> Dict[str, Tuple[torch.Tensor]]:
     # Batch the tokens
     query = pad_sequence(
-        [torch.tensor(x["query"]) for x in batch],
+        (torch.tensor(x["query"], dtype=torch.long, pin_memory=True, requires_grad=False) for x in batch),
         batch_first=True,
         padding_value=padding_idx,
+        padding_side="left",
     )
     positive = pad_sequence(
-        [torch.tensor(x["positive"]) for x in batch],
+        (torch.tensor(x["positive"], dtype=torch.long, pin_memory=True, requires_grad=False) for x in batch),
         batch_first=True,
         padding_value=padding_idx,
+        padding_side="left",
     )
     negative = pad_sequence(
-        [torch.tensor(x["negative"]) for x in batch],
+        (torch.tensor(x["negative"], dtype=torch.long, pin_memory=True, requires_grad=False) for x in batch),
         batch_first=True,
         padding_value=padding_idx,
+        padding_side="left",
     )
     # Sequence length for each sample in batch
     batch_seqlen_query = torch.tensor(
-        [len(x["query"]) for x in batch], dtype=torch.int
+        [len(x["query"]) for x in batch], dtype=torch.int, pin_memory=True, requires_grad=False
     )
     batch_seqlen_positive = torch.tensor(
-        [len(x["positive"]) for x in batch], dtype=torch.int
+        [len(x["positive"]) for x in batch], dtype=torch.int, pin_memory=True, requires_grad=False
     )
     batch_seqlen_negative = torch.tensor(
-        [len(x["negative"]) for x in batch], dtype=torch.int
+        [len(x["negative"]) for x in batch], dtype=torch.int, pin_memory=True, requires_grad=False
     )
-    # we don't have to pad these 3 sets into same length 
-    # because they will be pooled into embedding of same dim
+    # we don't have to pad these 3 sets into same length ,
+    # because they will be pooled into embedding of same dim.
+    # but here we pad them to support torch.compile and avoid recompilation
+    if max_padding_len is not None:
+        def pad_left(t):
+            return F.pad(t, (max(max_padding_len - t.size(1), 0), 0), value=padding_idx)
+        query = pad_left(query[:, :max_padding_len])
+        positive = pad_left(positive[:, :max_padding_len])
+        negative = pad_left(negative[:, :max_padding_len])
+
     return {
-        "query": (query.long(), batch_seqlen_query),
-        "positive": (positive.long(), batch_seqlen_positive),
-        "negative": (negative.long(), batch_seqlen_negative),
+        "query": (query, batch_seqlen_query),
+        "positive": (positive, batch_seqlen_positive),
+        "negative": (negative, batch_seqlen_negative),
     }
 
 
