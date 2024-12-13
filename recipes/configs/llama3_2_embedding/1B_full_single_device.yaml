@@ -36,7 +36,7 @@ dataset:
   packed: False
   cache_dir: /tmp
   pin_memory: True
-  max_padding_len: 128
+  max_padding_len: null
 collate_fn: torchtune.data.padded_collate_retrieval_triplet
 
 seed: null
@@ -62,7 +62,11 @@ batch_size: 96
 epochs: 1
 optimizer:
   _component_: bitsandbytes.optim.PagedAdamW8bit
-  lr: 3e-8
+  # lr: 3e-7
+  lr: 2e-4
+lr_scheduler:
+  _component_: torchtune.training.lr_schedulers.get_cosine_schedule_with_warmup
+  num_warmup_steps: 300
 loss:
   # _component_: torchtune.modules.loss.CEWithChunkedOutputLoss
   # triplet contrastive loss
@@ -72,18 +76,18 @@ loss:
   # TODO(pls331): Pair-wise contrastive loss
   # _component_: torch.nn.CosineEmbeddingLoss # cosine similarity
   # _component_: torch.nn.MarginRankingLoss # euclidian distance
+
+# Performance
 max_steps_per_epoch: null
 gradient_accumulation_steps: 1  # Use to increase virtual batch size
 optimizer_in_bwd: True # True saves memory. Requires gradient_accumulation_steps=1
-compile: True # pytorch compile, set to true for better perf/memory
-
-# Training environment
-device: cuda
-
+compile: False # pytorch compile, set to true for better perf/memory
 # Memory management
 enable_activation_checkpointing: True # True reduces memory
 enable_activation_offloading: False # True reduces memory
 
+# Training environment
+device: cuda
 # Reduced precision
 dtype: bf16
 
@@ -103,7 +107,7 @@ log_peak_memory_stats: True
 # Profiler 
 profiler:
   _component_: torchtune.training.setup_torch_profiler
-  enabled: False
+  enabled: True
 
   #Output directory of trace artifacts
   output_dir: ${output_dir}/profiling_outputs
@@ -113,7 +117,7 @@ profiler:
   cuda: True
 
   #trace options passed to `torch.profiler.profile`
-  profile_memory: True
+  profile_memory: False
   with_stack: True
   record_shapes: True
   with_flops: True
@@ -121,6 +125,6 @@ profiler:
   # `torch.profiler.schedule` options:
   # wait_steps -> wait, warmup_steps -> warmup, active_steps -> active, num_cycles -> repeat
   wait_steps: 5
-  warmup_steps: 3
-  active_steps: 2
+  warmup_steps: 25
+  active_steps: 3
   num_cycles: 1

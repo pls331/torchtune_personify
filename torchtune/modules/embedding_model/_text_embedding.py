@@ -79,8 +79,6 @@ class TextEmbeddingTransformerDecoder(nn.Module):
 
         # TODO(pls331): this only supports causal attention mask
         if self.emb_pooling == PoolingType.EOS:
-            # TODO(pls331)-P0: implement EOS pooling properly
-            # EOS is not always the last token because of padding
             pooled_emb = h_last_layer[:, -1, :]
         elif self.emb_pooling in {PoolingType.SUM, PoolingType.MEAN, PoolingType.POS_W_MEAN}:
             pos_w = get_pos_w(batch_seqlen, S, d, self.emb_pooling)

@@ -653,12 +653,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
         # free logits otherwise it peaks backward memory
         del logits
         return loss
-    
-    def _contrastive_loss_step(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """
-        batch: 
-        - question (anchor)
-        """
+
 
     def train(self) -> None:
         """
