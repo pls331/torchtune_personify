@@ -63,17 +63,25 @@ epochs: 1
 optimizer:
   _component_: bitsandbytes.optim.PagedAdamW8bit
   # lr: 3e-7
-  lr: 2e-4
+  lr: 3e-6
 lr_scheduler:
   _component_: torchtune.training.lr_schedulers.get_cosine_schedule_with_warmup
   num_warmup_steps: 300
 loss:
-  # _component_: torchtune.modules.loss.CEWithChunkedOutputLoss
-  # triplet contrastive loss
-  # TODO(pls331): implement InfoNCE
-  _component_: torch.nn.TripletMarginLoss # cosine similarity
+  ## Triplet contrastive loss ##
+  # TODO (pls331): it's not a wise choice to use sum here. Shall use mean
+  # for observability so that batch size doesn't affect the value of loss.
+  # Though it would have no impact on training.
+  # _component_: torch.nn.TripletMarginLoss # L2 norm
+  # reduction: sum
+  # margin: 1.0
+  _component_: torch.nn.TripletMarginWithDistanceLoss
   reduction: sum
-  # TODO(pls331): Pair-wise contrastive loss
+  distance_function: 
+    _component_: torchtune.modules.loss.cosine_distance # more meaningful intuition-wise
+  margin: 1.0
+  # TODO(pls331): implement HardNegativeNLLLoss, InfoNCE
+  ## TODO(pls331): Pair-wise contrastive loss ##
   # _component_: torch.nn.CosineEmbeddingLoss # cosine similarity
   # _component_: torch.nn.MarginRankingLoss # euclidian distance
 

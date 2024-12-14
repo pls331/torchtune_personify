@@ -17,6 +17,7 @@ from torch import nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader, DistributedSampler
 
+from torchtune.modules.loss import cosine_distance
 from torchtune import config, modules, training, utils
 from torchtune.config._utils import _get_component_from_path
 from torchtune.data import padded_collate_packed
@@ -700,7 +701,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
 
                 utils.batch_to_device(batch, self._device)
 
-                if isinstance(self._loss_fn, torch.nn.TripletMarginLoss):
+                if isinstance(self._loss_fn, (torch.nn.TripletMarginLoss, torch.nn.TripletMarginWithDistanceLoss)):
                     # triplet: (query, positive, negative)
                     query, pos, neg = batch["query"], batch["positive"], batch["negative"]
                     with self.activations_handling_ctx:

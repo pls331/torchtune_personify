@@ -29,7 +29,14 @@ def _instantiate_node(node: Dict[str, Any], *args: Any) -> Any:
     """
     if _has_component(node):
         _component_ = _get_component_from_path(node.get("_component_"))
-        kwargs = {k: v for k, v in node.items() if k != "_component_"}
+        # kwargs = {k: v for k, v in node.items() if k != "_component_"}
+        kwargs = {}
+        for k, v in node.items():
+            if k == "_component_":
+                continue
+            if isinstance(v, dict) and "_component_" in v:
+                v = _instantiate_node(v)
+            kwargs[k] = v
         return _create_component(_component_, args, kwargs)
     else:
         raise InstantiationError(

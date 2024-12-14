@@ -6,9 +6,12 @@
 
 from .ce_chunked_output_loss import CEWithChunkedOutputLoss
 from .kd_losses import ForwardKLLoss, ForwardKLWithChunkedOutputLoss
+from .hard_negative_nll_loss import cosine_similarity, cosine_distance
 
 __all__ = [
     "CEWithChunkedOutputLoss",
     "ForwardKLLoss",
     "ForwardKLWithChunkedOutputLoss",
+    "cosine_similarity",
+    "cosine_distance",
 ]
