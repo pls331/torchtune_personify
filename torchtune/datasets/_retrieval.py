@@ -1,3 +1,4 @@
+from enum import Enum
 import random
 
 from typing import Any, Callable, Dict, List, Mapping, Optional, Union
@@ -9,16 +10,24 @@ from torchtune.datasets._packed import PackedDataset
 from torchtune.modules.tokenizers import ModelTokenizer
 
 
-class RetrievalTripletDataset(Dataset):
+class RetrievalDataset(Dataset):
+    class DatasetType(str, Enum):
+        PAIR = "pair" # QA
+        TRIPLET = "triplet" # IR, NLI, etc,.
     """
-    The triplet is formated following instruct template
+    This dataset could be either triplet or pair.
+    - Pair = {"query": [...], "positive": [...]}
+    - Triplet = {"query": [...], "positive": [...], "negative": [...]}
+
+    The query is formated following instruct template
     `q_inst = Instruct: {task_definition} \n Query: {query}`
     This is introduced from paper:
-    1.Wang, L. et al. Improving Text Embeddings with Large Language Models. arXiv (2023) doi:10.48550/arxiv.2401.00368.
+    1.Wang, L. et al. Improving Text Embeddings with Large Language Models. arXiv (2023)
     """
 
     def __init__(
         self,
+        dataset_type: DatasetType,
         tokenizer: ModelTokenizer,
         source: str,
         column_query: str = "query",
@@ -29,6 +38,7 @@ class RetrievalTripletDataset(Dataset):
         filter_fn: Optional[Callable] = None,
         **load_dataset_kwargs: Dict[str, Any],
     ) -> None:
+        self.dataset_type = dataset_type
         self._tokenizer = tokenizer
         self._data = load_dataset(source, **load_dataset_kwargs)
         self.add_eos = add_eos
@@ -53,11 +63,11 @@ class RetrievalTripletDataset(Dataset):
         query, positive, negative = (
             sample[self._column_query],
             sample[self._column_positive],
-            sample[self._column_negative],
+            sample[self._column_negative] if self.dataset_type == RetrievalDataset.DatasetType.TRIPLET else None,
         )
 
         if self._inst_task_def:
-            if isinstance(self._inst_task_def, list):
+            if isinstance(self._inst_task_def, (list, tuple, set)):
                 task_def = random.choice(self._inst_task_def)
             else:
                 assert isinstance(self._inst_task_def, str), type(self._inst_task_def)
@@ -70,21 +80,27 @@ class RetrievalTripletDataset(Dataset):
         tokens_positive = self._tokenizer.encode(
             text=positive, add_bos=True, add_eos=self.add_eos
         )
-        tokens_negative = self._tokenizer.encode(
-            text=negative, add_bos=True, add_eos=self.add_eos
-        )
+        if self.dataset_type == RetrievalDataset.DatasetType.TRIPLET:
+            tokens_negative = self._tokenizer.encode(
+                text=negative, add_bos=True, add_eos=self.add_eos
+            )
 
         # Truncate if needed, but don't coerce EOS id
         if self._tokenizer.max_seq_len is not None:
             tokens_query_inst = truncate(tokens_query, self._tokenizer.max_seq_len - 1)
             tokens_positive = truncate(tokens_positive, self._tokenizer.max_seq_len - 1)
-            tokens_negative = truncate(tokens_negative, self._tokenizer.max_seq_len - 1)
+            if self.dataset_type == RetrievalDataset.DatasetType.TRIPLET:
+                tokens_negative = truncate(tokens_negative, self._tokenizer.max_seq_len - 1)
 
-        return {
-            self._column_query: tokens_query,
-            self._column_positive: tokens_positive,
-            self._column_negative: tokens_negative,
+        res = {
+            "query": tokens_query,
+            "positive": tokens_positive,
         }
+        if self.dataset_type == RetrievalDataset.DatasetType.TRIPLET:
+            res["negative"] = tokens_negative
+        else:
+            res["negative"] = None
+        return res
 
 
 def msmarco_dataset(
@@ -96,8 +112,9 @@ def msmarco_dataset(
     filter_fn: Optional[Callable] = None,
     split: str = "train",
     **load_dataset_kwargs: Dict[str, Any],
-) -> Union[RetrievalTripletDataset]:
-    ds = RetrievalTripletDataset(
+) -> Union[RetrievalDataset]:
+    ds = RetrievalDataset(
+        dataset_type=RetrievalDataset.DatasetType.TRIPLET,
         tokenizer=tokenizer,
         source=source,
         name=subset,
@@ -107,6 +124,32 @@ def msmarco_dataset(
         inst_task_def=[
             "Given a web search query, retrieve relevant passages that answer the query",
             "Given a web search query, retrieve relevant documents that answer the query",
+        ],
+        split=split,
+        add_eos=True,
+    )
+    return ds
+
+def eli5_dataset(
+    tokenizer: ModelTokenizer,
+    source: str = "sentence-transformers/eli5", # QA, 325K
+    subset: str = "pair",
+    max_seq_len: Optional[int] = None,
+    packed: bool = False,
+    filter_fn: Optional[Callable] = None,
+    split: str = "train",
+    **load_dataset_kwargs: Dict[str, Any],
+) -> Union[RetrievalDataset]:
+    ds = RetrievalDataset(
+        dataset_type=RetrievalDataset.DatasetType.PAIR,
+        tokenizer=tokenizer,
+        source=source,
+        name=subset,
+        column_query="question",
+        column_positive="answer",
+        column_negative=None,
+        inst_task_def=[
+            "Provided a user question, retrieve the highest voted answers on Reddit ELI5 forum",
         ],
         split=split,
         add_eos=True,

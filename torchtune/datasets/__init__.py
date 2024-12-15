@@ -9,7 +9,7 @@ from torchtune.datasets._alpaca import alpaca_cleaned_dataset, alpaca_dataset
 from torchtune.datasets._chat import chat_dataset
 from torchtune.datasets._cnn_dailymail import cnn_dailymail_articles_dataset
 from torchtune.datasets._concat import ConcatDataset
-from torchtune.datasets._retrieval_triplet import msmarco_dataset
+from torchtune.datasets._retrieval import msmarco_dataset, eli5_dataset
 from torchtune.datasets._grammar import grammar_dataset
 from torchtune.datasets._hh_rlhf_helpful import hh_rlhf_helpful_dataset
 from torchtune.datasets._instruct import instruct_dataset
@@ -45,5 +45,6 @@ __all__ = [
     "SFTDataset",
     "hh_rlhf_helpful_dataset",
     "multimodal",
-    "msmarco_dataset"
+    "msmarco_dataset",
+    "eli5_dataset",
 ]

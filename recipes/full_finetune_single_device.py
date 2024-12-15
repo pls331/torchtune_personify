@@ -22,6 +22,7 @@ from torchtune import config, modules, training, utils
 from torchtune.config._utils import _get_component_from_path
 from torchtune.data import padded_collate_packed
 from torchtune.datasets import ConcatDataset
+from torchtune.modules.loss import HardNegativeNLLLoss
 from torchtune.recipe_interfaces import FTRecipeInterface
 from torchtune.training import DummyProfiler, PROFILER_KEY
 from torchtune.training.lr_schedulers import get_lr
@@ -598,7 +599,7 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
                 if not packed
                 else padded_collate_packed
             ),
-            pin_memory=cfg_dataset.pin_memory,
+            pin_memory=cfg_dataset.get("pin_memory", False),
         )
 
         log.info("Dataset and Sampler are initialized.")
@@ -701,13 +702,13 @@ class FullFinetuneRecipeSingleDevice(FTRecipeInterface):
 
                 utils.batch_to_device(batch, self._device)
 
-                if isinstance(self._loss_fn, (torch.nn.TripletMarginLoss, torch.nn.TripletMarginWithDistanceLoss)):
+                if isinstance(self._loss_fn, (torch.nn.TripletMarginLoss, torch.nn.TripletMarginWithDistanceLoss, HardNegativeNLLLoss)):
                     # triplet: (query, positive, negative)
                     query, pos, neg = batch["query"], batch["positive"], batch["negative"]
                     with self.activations_handling_ctx:
                         emb_query = self._model(tokens=query[0], batch_seqlen=query[1])
                         emb_pos = self._model(tokens=pos[0], batch_seqlen=pos[1])
-                        emb_neg = self._model(tokens=neg[0], batch_seqlen=neg[1])
+                        emb_neg = self._model(tokens=neg[0], batch_seqlen=neg[1]) if neg is not None else None
                     current_loss = self._loss_fn(emb_query, emb_pos, emb_neg)
                     # TODO(pls331): support gradient accumulation
                     # Use batch size (num stample) as num_tokens for embedding model
